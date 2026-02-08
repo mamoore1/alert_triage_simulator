@@ -3,8 +3,10 @@ import { calculateScore } from '../utils/scoring'
 import scenario001 from '../data/scenarios/scenario_001.json'
 import scenario002 from '../data/scenarios/scenario_002.json'
 import scenario003 from '../data/scenarios/scenario_003.json'
+import scenario004 from '../data/scenarios/scenario_004.json'
+import scenario005 from '../data/scenarios/scenario_005.json'
 
-const scenarios = { scenario_001: scenario001, scenario_002: scenario002, scenario_003: scenario003 }
+const scenarios = { scenario_001: scenario001, scenario_002: scenario002, scenario_003: scenario003, scenario_004: scenario004, scenario_005: scenario005 }
 
 function isUnlocked(action, actionsTaken) {
   // No requires field or empty array = Tier 1, always available

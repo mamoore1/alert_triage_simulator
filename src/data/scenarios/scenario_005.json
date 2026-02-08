@@ -1,0 +1,139 @@
+{
+  "id": "scenario_005",
+  "title": "Suspicious Credential Access Activity",
+  "description": "Credential dumping behavior has been detected on a domain-joined server. The activity pattern matches known attack tools. Investigate and determine the appropriate response.",
+  "difficulty": "Hard",
+  "alert": {
+    "title": "LSASS Memory Access — Credential Dumping Behavior Detected",
+    "severity": "Critical",
+    "timestamp": "2026-02-08 14:37:22 UTC",
+    "fields": {
+      "Host": "SVR-DC-TEST-03",
+      "User": "svc-pentest",
+      "Process": "procdump.exe → lsass.exe",
+      "Detection Rule": "Credential Access — LSASS Memory Dump (T1003.001)",
+      "MITRE ATT&CK": "T1003.001 — OS Credential Dumping: LSASS Memory"
+    }
+  },
+  "investigation_actions": [
+    {
+      "id": "check_process_details",
+      "label": "Review the flagged process details",
+      "result": {
+        "type": "code",
+        "content": "Process: C:\\PenTest\\Tools\\procdump.exe -accepteula -ma lsass.exe C:\\PenTest\\Output\\lsass.dmp\nParent: C:\\PenTest\\Tools\\cobalt_strike_beacon.exe\nPID: 7284 | Parent PID: 6140\nStarted: 2026-02-08 14:37:19 UTC\nSigned: Yes (Microsoft Sysinternals)\nExecution directory: C:\\PenTest\\Tools\\"
+      },
+      "weight": "essential",
+      "requires": []
+    },
+    {
+      "id": "check_edr_alerts",
+      "label": "Check endpoint detection alerts for this host",
+      "result": {
+        "type": "text",
+        "content": "EDR generated 4 alerts for SVR-DC-TEST-03 in the past hour:\n• 14:22 — Cobalt Strike beacon detected (allowed — EDR in monitor-only mode on this host)\n• 14:31 — Privilege escalation via token impersonation (allowed)\n• 14:37 — LSASS memory access (current alert)\n• 14:37 — Credential dump file creation detected\nNote: EDR policy for this host is set to 'Detect Only / No Block' — changed on Feb 7 at 09:00 by security-admin."
+      },
+      "weight": "essential",
+      "requires": []
+    },
+    {
+      "id": "check_user_account",
+      "label": "Review the account performing the activity",
+      "result": {
+        "type": "text",
+        "content": "Account 'svc-pentest' is a domain admin account created on Feb 6 by security-admin (Mark Torres, IT Security Manager). Account description: 'Authorized penetration testing — Q1 2026'. Account is member of Domain Admins and has logon-to restrictions limiting it to 5 hosts in the 10.10.50.0/24 subnet. Password last set: Feb 6. No prior logon history before Feb 7."
+      },
+      "weight": "essential",
+      "requires": []
+    },
+    {
+      "id": "check_host_details",
+      "label": "Review the target host information",
+      "result": {
+        "type": "text",
+        "content": "SVR-DC-TEST-03 is a domain controller in the isolated test segment (VLAN 50, 10.10.50.0/24). Asset tag: TEST-2026-PT. Asset notes updated Feb 6: 'Designated pentest target — Q1 security assessment'. Segment is firewalled from production. Host was reimaged on Feb 5 from production DC snapshot for testing purposes. No production workloads."
+      },
+      "weight": "good_practice",
+      "requires": []
+    },
+    {
+      "id": "check_change_management",
+      "label": "Check change management for scheduled security testing",
+      "result": {
+        "type": "text",
+        "content": "Change ticket CHG-2026-0892: 'Q1 External Penetration Test — CyberEdge Security Ltd.'\n• Status: Approved and In Progress\n• Window: Feb 7-14, 2026 (business hours)\n• Scope: Internal network pentest of isolated test segment (10.10.50.0/24)\n• Approved by: CISO (Rebecca Liu), IT Security Manager (Mark Torres)\n• Testing firm: CyberEdge Security Ltd. (contracted, NDA on file)\n• Authorized tools: Cobalt Strike, Mimikatz, Impacket, Bloodhound, Nmap\n• Source IPs: VPN tunnel from CyberEdge (198.51.100.50) + local svc-pentest account"
+      },
+      "weight": "essential",
+      "requires": ["check_user_account", "check_edr_alerts"]
+    },
+    {
+      "id": "check_network_activity",
+      "label": "Analyze network activity following the credential access",
+      "result": {
+        "type": "text",
+        "content": "Post-LSASS access network activity from SVR-DC-TEST-03:\n• SMB connections to 10.10.50.4 and 10.10.50.5 (other test segment hosts)\n• LDAP queries against the test domain\n• No connections outside the 10.10.50.0/24 subnet\n• Firewall confirms: all traffic from test VLAN to production is blocked and no bypass attempts detected\nActivity is completely contained within the isolated test segment."
+      },
+      "weight": "good_practice",
+      "requires": ["check_process_details"]
+    },
+    {
+      "id": "check_related_alerts",
+      "label": "Check for related alerts from the same source",
+      "result": {
+        "type": "text",
+        "content": "14 total alerts from svc-pentest / test segment in the past 48 hours:\n• Port scanning (10.10.50.0/24 range) — 3 alerts\n• Vulnerability scanning (CVE probes) — 4 alerts\n• Kerberoasting attempt — 1 alert\n• Privilege escalation — 2 alerts\n• Lateral movement (PsExec) — 2 alerts\n• Credential dumping (current + 1 prior) — 2 alerts\nAll activity confined to test segment. Pattern is consistent with a methodical penetration test progressing through the kill chain."
+      },
+      "weight": "good_practice",
+      "requires": ["check_edr_alerts"]
+    },
+    {
+      "id": "verify_testing_scope",
+      "label": "Verify activity falls within authorized testing scope",
+      "result": {
+        "type": "text",
+        "content": "Scope verification:\n• Target hosts: all within 10.10.50.0/24 ✓ (authorized range)\n• Timeframe: Feb 8, 14:22-14:37 UTC ✓ (within Feb 7-14 business hours window)\n• Tools used: Cobalt Strike, ProcDump ✓ (on authorized tools list)\n• Account: svc-pentest ✓ (designated testing account)\n• Techniques: credential dumping, lateral movement ✓ (within pentest scope — 'no restrictions on techniques within test segment')\nAll observed activity falls within the authorized scope documented in CHG-2026-0892."
+      },
+      "weight": "neutral",
+      "requires": ["check_host_details", "check_user_account"]
+    }
+  ],
+  "decisions": [
+    {
+      "id": "verify_and_close",
+      "label": "Verify with security team that this is the approved pentest, document and close",
+      "outcome": "correct",
+      "base_points": 100,
+      "feedback": "Correct! This is an authorized penetration test conducted by a contracted firm within an approved change window. You verified with the security team, confirmed it matches the change ticket, and documented the alert as expected activity. This prevents unnecessary incident response while maintaining accountability."
+    },
+    {
+      "id": "close_approved_testing",
+      "label": "Close as approved security testing — matches change ticket",
+      "outcome": "partial",
+      "base_points": 60,
+      "feedback": "Close, but not quite. You correctly identified this as authorized testing, but closing based solely on your investigation without verbally confirming with the security team is risky. What if the real pentest was scheduled for next week and this is an attacker using similar infrastructure? Always verify with the authorizing team, even when evidence looks conclusive."
+    },
+    {
+      "id": "monitor_no_action",
+      "label": "Monitor the activity but don't interfere — appears to be authorized testing",
+      "outcome": "incorrect",
+      "base_points": 40,
+      "feedback": "Incorrect. While you recognized this might be authorized, 'monitor and wait' is not a resolution. Critical-severity alerts for credential dumping require a definitive determination — either it's authorized (verify and close) or it's not (escalate immediately). Leaving a critical alert in limbo creates risk if your assumption is wrong."
+    },
+    {
+      "id": "escalate_credential_dump",
+      "label": "Escalate to IR team — active credential dumping on domain controller",
+      "outcome": "incorrect",
+      "base_points": 20,
+      "feedback": "Incorrect. While credential dumping on a domain controller is normally a critical finding, the investigation clearly shows this is an authorized penetration test: dedicated test account, isolated test segment, approved change ticket, and EDR deliberately set to monitor-only mode. Escalating wastes IR team resources and could disrupt the approved security assessment."
+    },
+    {
+      "id": "isolate_and_disable",
+      "label": "Isolate the host and disable the account immediately",
+      "outcome": "incorrect",
+      "base_points": 10,
+      "feedback": "Incorrect. Isolating the host and disabling the account would halt an approved, CISO-authorized penetration test. The activity is in an isolated test segment with no production impact. Taking containment action without checking for authorized testing disrupts the security assessment, wastes the testing firm's billable hours, and damages the SOC's credibility with security leadership."
+    }
+  ],
+  "optimal_investigation_count": 4,
+  "max_investigation_count": 8
+}

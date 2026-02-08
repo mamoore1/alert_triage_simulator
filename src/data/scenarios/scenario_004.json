@@ -1,0 +1,139 @@
+{
+  "id": "scenario_004",
+  "title": "Unusual Outbound Data Transfer",
+  "description": "A large outbound data transfer to an external cloud storage service has been flagged by the DLP system. Determine whether this represents data exfiltration or authorized activity.",
+  "difficulty": "Easy",
+  "alert": {
+    "title": "High-Volume Outbound Transfer to External Cloud Storage",
+    "severity": "High",
+    "timestamp": "2026-02-08 10:52:03 UTC",
+    "fields": {
+      "User": "emily.ross",
+      "Destination": "drive.google.com",
+      "Transfer Size": "4.5 GB (847 files)",
+      "Duration": "10:15:41 - 10:52:03 UTC (~36 minutes)",
+      "Detection Rule": "DLP — Outbound Transfer Exceeding 1 GB to External Cloud Service"
+    }
+  },
+  "investigation_actions": [
+    {
+      "id": "review_transfer_details",
+      "label": "Review the data transfer details",
+      "result": {
+        "type": "text",
+        "content": "4.5 GB transferred to drive.google.com over 36 minutes via HTTPS. 847 files uploaded to a shared Google Drive folder. Transfer initiated from emily.ross's workstation (DESKTOP-4R8N1KP) using Chrome browser. Single continuous session — no signs of staging, chunking, or obfuscation techniques. Upload speed consistent with office network bandwidth."
+      },
+      "weight": "essential",
+      "requires": []
+    },
+    {
+      "id": "check_file_contents",
+      "label": "Review the files involved in the transfer",
+      "result": {
+        "type": "text",
+        "content": "File breakdown: 23 video files (.mp4, .mov — 3.8 GB), 412 images (.png, .jpg — 580 MB), 14 design files (.psd, .ai — 120 MB), 398 thumbnail/preview files. File names reference 'Q1 Spring Campaign', 'Product Launch 2026', and 'Brand Assets v3'. No documents (.docx, .xlsx, .pdf), no source code, no database exports, no archive files (.zip, .rar)."
+      },
+      "weight": "essential",
+      "requires": []
+    },
+    {
+      "id": "check_destination",
+      "label": "Investigate the transfer destination",
+      "result": {
+        "type": "text",
+        "content": "Destination is a Google Drive shared folder titled 'Meridian Creative — Spring 2026 Assets'. Folder is shared with 4 external accounts (@meridiancreative.com) and 3 internal accounts (emily.ross, j.park, m.santos). Folder was created 6 months ago and has been used for 3 previous campaign asset deliveries. Google Workspace audit shows folder was provisioned through an IT service request (REQ-2025-4471)."
+      },
+      "weight": "essential",
+      "requires": []
+    },
+    {
+      "id": "check_user_profile",
+      "label": "Review user's account and role",
+      "result": {
+        "type": "text",
+        "content": "emily.ross — Marketing Creative Lead, Brand & Campaigns team. Employee since 2023. Manages relationships with external creative agencies. Has standard user access plus Marketing shared drives and brand asset repositories. No elevated privileges. Account in good standing, no prior security incidents."
+      },
+      "weight": "good_practice",
+      "requires": []
+    },
+    {
+      "id": "check_dlp_scan",
+      "label": "Run DLP content scan on transferred files",
+      "result": {
+        "type": "text",
+        "content": "DLP deep content scan complete. Results: no PII detected, no financial data, no customer records, no source code, no documents with classification markings. All 847 files are media assets (video, image, design files). Content fingerprinting confirms files originated from the Marketing shared drive '/Brand Assets/Spring 2026/' — an approved internal repository."
+      },
+      "weight": "good_practice",
+      "requires": ["check_file_contents"]
+    },
+    {
+      "id": "check_user_history",
+      "label": "Review user's historical transfer patterns",
+      "result": {
+        "type": "text",
+        "content": "emily.ross has made similar large transfers 4 times in the past 6 months:\n• Aug 2025: 3.1 GB to same Google Drive folder (Fall Campaign assets)\n• Oct 2025: 2.7 GB to same folder (Holiday Campaign assets)\n• Dec 2025: 1.8 GB to same folder (Year-End Review assets)\n• Jan 2026: 890 MB to same folder (Brand refresh previews)\nAll transfers were during business hours, all to the same destination. Pattern is established and consistent."
+      },
+      "weight": "good_practice",
+      "requires": ["check_user_profile"]
+    },
+    {
+      "id": "verify_business_justification",
+      "label": "Check for business justification or approval",
+      "result": {
+        "type": "text",
+        "content": "Project management system shows active project: 'Q1 Spring Campaign — Meridian Creative Agency'. Project owner: emily.ross. Approved by Marketing Director (j.park) on Jan 20. Deliverable listed: 'Upload final approved campaign assets to shared drive by Feb 8'. External agency contract (Meridian Creative Ltd.) on file with Procurement, active since July 2025. IT service request REQ-2025-4471 approved the shared Google Drive folder."
+      },
+      "weight": "good_practice",
+      "requires": ["check_user_profile", "check_destination"]
+    },
+    {
+      "id": "check_transfer_timing",
+      "label": "Check if transfer timing is anomalous",
+      "result": {
+        "type": "text",
+        "content": "Transfer started at 10:15 AM local time during normal business hours. Badge access logs confirm emily.ross swiped into the office at 08:47 AM. Workstation logon at 08:52 AM. Normal activity pattern throughout the morning — email, SharePoint, internal chat. Transfer was initiated through the Chrome browser (not scripted or automated). No after-hours or weekend activity."
+      },
+      "weight": "neutral",
+      "requires": ["review_transfer_details"]
+    }
+  ],
+  "decisions": [
+    {
+      "id": "verify_and_document",
+      "label": "Verify with user/manager, document as approved business activity, create DLP exception",
+      "outcome": "correct",
+      "base_points": 100,
+      "feedback": "Correct! This is a legitimate business transfer — marketing assets to an approved external agency. You verified the activity, documented it as a known-good pattern, and created a DLP exception to reduce future false positive alerts for this established workflow. This is efficient, thorough SOC work."
+    },
+    {
+      "id": "close_false_positive",
+      "label": "Close as false positive — files are non-sensitive media assets",
+      "outcome": "partial",
+      "base_points": 60,
+      "feedback": "You reached the right conclusion, but closing without verification or documentation means this same transfer will trigger alerts next time. Best practice is to confirm with the user, document the approved workflow, and create a DLP exception so future legitimate transfers don't generate unnecessary alerts."
+    },
+    {
+      "id": "flag_for_review",
+      "label": "Flag for manager review — transfer volume warrants additional oversight",
+      "outcome": "incorrect",
+      "base_points": 35,
+      "feedback": "Incorrect. The investigation clearly shows this is an approved, documented workflow that has been used 4 times previously. Flagging for manager review adds unnecessary delay and overhead. When evidence conclusively shows legitimate activity, the right call is to verify, document, and close — not pass it along."
+    },
+    {
+      "id": "escalate_exfiltration",
+      "label": "Escalate to IR team — potential data exfiltration in progress",
+      "outcome": "incorrect",
+      "base_points": 15,
+      "feedback": "Incorrect. The transferred files are media assets (videos and images), the destination is an approved shared folder provisioned by IT, and the user has an established pattern of similar transfers. Escalating this as exfiltration wastes IR team resources and shows insufficient investigation of the available evidence."
+    },
+    {
+      "id": "block_and_quarantine",
+      "label": "Block user's cloud access and quarantine transferred files immediately",
+      "outcome": "incorrect",
+      "base_points": 5,
+      "feedback": "Incorrect. Blocking access and quarantining files for a legitimate, approved business workflow disrupts the marketing team's campaign delivery and damages the SOC's relationship with business teams. There is no evidence of malicious intent — the user, destination, files, and timing all indicate normal business activity."
+    }
+  ],
+  "optimal_investigation_count": 4,
+  "max_investigation_count": 8
+}
