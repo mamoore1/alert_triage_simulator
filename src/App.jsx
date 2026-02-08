@@ -5,6 +5,7 @@ import InvestigationPanel from './components/InvestigationPanel'
 import ActionResult from './components/ActionResult'
 import DecisionPanel from './components/DecisionPanel'
 import ScoreCard from './components/ScoreCard'
+import OnboardingModal from './components/OnboardingModal'
 
 export default function App() {
   const {
@@ -23,7 +24,12 @@ export default function App() {
   } = useScenario()
 
   if (phase === 'select') {
-    return <ScenarioSelector scenarios={availableScenarios} onSelect={loadScenario} />
+    return (
+      <>
+        <OnboardingModal />
+        <ScenarioSelector scenarios={availableScenarios} onSelect={loadScenario} />
+      </>
+    )
   }
 
   if (phase === 'result' && result) {
