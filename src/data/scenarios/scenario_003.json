@@ -1,0 +1,139 @@
+{
+  "id": "scenario_003",
+  "title": "Anomalous Geographic Logon",
+  "description": "A user account has authenticated from an unexpected geographic location. Determine whether this represents a compromised account or legitimate activity.",
+  "difficulty": "Medium",
+  "alert": {
+    "title": "Logon from Unusual Geographic Location",
+    "severity": "Medium",
+    "timestamp": "2026-02-08 03:42:18 UTC",
+    "fields": {
+      "User": "sarah.chen",
+      "Source IP": "103.28.71.94",
+      "Location": "Singapore",
+      "Normal Location": "London, United Kingdom",
+      "Detection Rule": "Geographic Anomaly — Logon Outside Baseline Region"
+    }
+  },
+  "investigation_actions": [
+    {
+      "id": "check_logon_details",
+      "label": "Review the logon session details",
+      "result": {
+        "type": "text",
+        "content": "Successful logon at 03:42:18 UTC from 103.28.71.94 (Singapore). Authentication method: password + MFA push notification accepted on user's registered mobile device. Session duration: 47 minutes. Browser fingerprint matches previously seen profile (Windows 11, Chrome 132). Connection via HTTPS to Microsoft 365 tenant."
+      },
+      "weight": "essential",
+      "requires": []
+    },
+    {
+      "id": "review_logon_history",
+      "label": "Check user's recent logon history",
+      "result": {
+        "type": "text",
+        "content": "Last 7 days of logon activity for sarah.chen:\n• Feb 1-5: London, UK (office IP range 198.51.100.0/24) — normal pattern\n• Feb 6: London Heathrow Airport WiFi (06:15 UTC), then Dubai, UAE (18:40 UTC)\n• Feb 7: Dubai, UAE (08:12 UTC, 14:30 UTC)\n• Feb 8: Singapore (03:42 UTC) — current session\nGeographic progression: London → Dubai → Singapore over 3 days."
+      },
+      "weight": "essential",
+      "requires": []
+    },
+    {
+      "id": "check_account_profile",
+      "label": "Review user's account and role",
+      "result": {
+        "type": "text",
+        "content": "sarah.chen — Senior Sales Manager, APAC Division. Employee since 2021. Has access to CRM, SharePoint, email, and regional sales dashboards. Travel history shows 6 international trips in past 12 months (Singapore, Tokyo, Sydney, Dubai x2, New York). Account in good standing, no prior security incidents."
+      },
+      "weight": "good_practice",
+      "requires": []
+    },
+    {
+      "id": "check_source_ip_reputation",
+      "label": "Check source IP reputation",
+      "result": {
+        "type": "text",
+        "content": "IP 103.28.71.94 belongs to Marina Bay Sands hotel business center network (ASN: SingNet). Clean reputation — no threat intel flags, no abuse reports, no association with VPN/proxy services. Commonly seen in corporate travel logon patterns for Singapore-based hotels."
+      },
+      "weight": "good_practice",
+      "requires": []
+    },
+    {
+      "id": "check_user_calendar",
+      "label": "Check user's calendar and travel records",
+      "result": {
+        "type": "text",
+        "content": "Calendar shows: 'APAC Sales Conference 2026 — Marina Bay Sands, Singapore' blocked from Feb 7-11. Travel request approved by manager (David Park) on Jan 15. Corporate travel booking confirms: flight LHR→DXB (Feb 6), DXB→SIN (Feb 7), return SIN→LHR (Feb 12). Hotel reservation at Marina Bay Sands matches the source IP's registered network."
+      },
+      "weight": "essential",
+      "requires": ["review_logon_history", "check_account_profile"]
+    },
+    {
+      "id": "verify_device_identity",
+      "label": "Verify the device used for logon",
+      "result": {
+        "type": "text",
+        "content": "Device fingerprint matches sarah.chen's registered corporate laptop (Dell Latitude 5540, asset tag IT-2024-0847). Same hardware ID, OS build (Windows 11 23H2), and TPM attestation as previous logons from London. Intune compliance status: compliant. BitLocker: enabled. Last policy sync: 2 hours ago."
+      },
+      "weight": "good_practice",
+      "requires": ["check_logon_details"]
+    },
+    {
+      "id": "check_impossible_travel",
+      "label": "Analyze geographic movement for impossible travel",
+      "result": {
+        "type": "text",
+        "content": "Travel timeline analysis:\n• London → Dubai: last London logon Feb 5 17:30 UTC, first Dubai logon Feb 6 18:40 UTC (25 hours apart, flight time ~7 hours) ✓ Possible\n• Dubai → Singapore: last Dubai logon Feb 7 14:30 UTC, first Singapore logon Feb 8 03:42 UTC (13 hours apart, flight time ~7 hours) ✓ Possible\nNo impossible travel detected. Geographic movement is consistent with physical travel."
+      },
+      "weight": "good_practice",
+      "requires": ["review_logon_history"]
+    },
+    {
+      "id": "review_session_activity",
+      "label": "Review what the user accessed during this session",
+      "result": {
+        "type": "text",
+        "content": "Session activity (47 minutes): accessed Outlook email (read 12 messages, sent 3 — all to known internal contacts about conference logistics). Opened 2 files on SharePoint (APAC Q1 Sales Deck.pptx, Conference Agenda.pdf). Accessed CRM dashboard for APAC region. No unusual data downloads, no access to admin portals, no lateral movement. Activity pattern consistent with user's normal work behavior."
+      },
+      "weight": "neutral",
+      "requires": ["check_logon_details"]
+    }
+  ],
+  "decisions": [
+    {
+      "id": "contact_and_verify",
+      "label": "Contact user to verify legitimate travel, then close with documentation",
+      "outcome": "correct",
+      "base_points": 100,
+      "feedback": "Correct! The evidence strongly suggests legitimate travel, but best practice is to verify directly with the user before closing. Sarah confirms she's attending the APAC Sales Conference in Singapore. You document the verification and close the alert — building a baseline exception for future travel-related logons."
+    },
+    {
+      "id": "close_false_positive",
+      "label": "Close as false positive — evidence indicates legitimate travel",
+      "outcome": "partial",
+      "base_points": 60,
+      "feedback": "Close, but not quite. You correctly identified this as likely legitimate activity, but closing without directly verifying with the user skips a critical step. Even when evidence is strong, a quick verification call confirms your hypothesis and documents the exception. What if the attacker had access to a similar travel pattern?"
+    },
+    {
+      "id": "monitor_watchlist",
+      "label": "Add to monitoring watchlist — suspicious but insufficient evidence to act",
+      "outcome": "incorrect",
+      "base_points": 40,
+      "feedback": "Incorrect. The investigation evidence clearly points to legitimate travel, not a threat. Adding to a watchlist without resolving the alert wastes monitoring resources and leaves the analyst who picks it up next with the same question. The right call is to verify with the user and close decisively."
+    },
+    {
+      "id": "escalate_compromise",
+      "label": "Escalate to IR team — suspected account compromise from foreign location",
+      "outcome": "incorrect",
+      "base_points": 20,
+      "feedback": "Incorrect. Escalating without considering the evidence wastes IR team resources. The logon used valid MFA from the user's registered device, the geographic movement is physically possible, and the user has a documented travel history. Always investigate before escalating — context matters."
+    },
+    {
+      "id": "reset_credentials",
+      "label": "Reset user credentials and force re-authentication immediately",
+      "outcome": "incorrect",
+      "base_points": 10,
+      "feedback": "Incorrect. Resetting credentials for a traveling employee disrupts their work at a business conference with no evidence of compromise. The logon used valid MFA, came from a registered device, and the travel pattern is legitimate. Disruptive containment actions should only be taken when there's actual evidence of compromise."
+    }
+  ],
+  "optimal_investigation_count": 4,
+  "max_investigation_count": 8
+}
